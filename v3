@@ -2149,4 +2149,4 @@ LocalPlayer.Backpack.ChildAdded:Connect(function(v) if v:IsA("Tool") then SC_Set
 -- reset stomp state on respawn
 LocalPlayer.CharacterAdded:Connect(function()
     StompInProgress = false
-end)
+end) 
