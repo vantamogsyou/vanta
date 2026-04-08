@@ -67,6 +67,7 @@ JumpSection:Slider({  name="Power",       pointer="jumppower",    minimum=50, ma
 
 local StompSection = MovementTab:Section({ name = "Auto Stomp", side = "left" })
 StompSection:Toggle({ name="Auto Stomp", pointer="autostomp", default=false, callback=function()end })
+StompSection:Toggle({ name="Bullet TP",  pointer="bullettp",  default=false, callback=function()end })
 
 local VisualsTab = Window:Page({ name = "Visuals" })
 local ESPSection = VisualsTab:Section({ name = "ESP", side = "left" })
@@ -182,6 +183,9 @@ local TriggerBotActive,LastTriggerShot   = false,0
 local CamLockActive,CamLockTarget        = false,nil
 local SuperJumpActive,SuperJumpCooldown  = false,false
 local InfRangeActive                     = false
+local BulletTPActive                     = false
+local BulletTPHealthConn                 = nil
+local BulletTPCharConn                   = nil
 local IS_ACCURACY_GAME = game.PlaceId == 110753873913806
 
 local CachedPing,LastPingUpdate = 0.05,0
@@ -1610,6 +1614,81 @@ RunService.Heartbeat:Connect(function()
 end)
 
 -- ============================================================================
+-- BULLET TP
+-- Hooks __namecall to redirect FireServer mouse-position remotes to the
+-- current target's HRP. Hit notifications fire via the existing SpawnHitNoti.
+-- ============================================================================
+local BTP_REMOTES = {
+    "UpdateMousePos","GetMousePos","MousePos",
+    "MOUSE","MousePosUpdate","UpdateMousePosI2","UpdateMousePosI",
+}
+
+local function BTP_GetTargetPos()
+    local tgt = CurrentTarget or SelectedTarget or CamLockTarget
+    if tgt and tgt.Character then
+        local hrp = tgt.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then return hrp.Position end
+    end
+    return nil
+end
+
+local btpGrm = getrawmetatable(game)
+local btpOldNamecall = btpGrm.__namecall
+setreadonly(btpGrm, false)
+btpGrm.__namecall = newcclosure(function(...)
+    local args   = { ... }
+    local method = getnamecallmethod()
+    if flags.bullettp and BulletTPActive and method == "FireServer" then
+        for _, name in ipairs(BTP_REMOTES) do
+            if args[2] == name then
+                local pos = BTP_GetTargetPos()
+                if pos then
+                    args[3] = pos
+                    return btpOldNamecall(table.unpack(args))
+                end
+            end
+        end
+    end
+    return btpOldNamecall(...)
+end)
+setreadonly(btpGrm, true)
+
+local function BTP_HookHealth(tgt)
+    if BulletTPHealthConn then BulletTPHealthConn:Disconnect(); BulletTPHealthConn = nil end
+    if not tgt or not tgt.Character then return end
+    local hum = tgt.Character:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
+    local lastHp = hum.Health
+    BulletTPHealthConn = hum.HealthChanged:Connect(function(newHp)
+        if flags.bullettp and BulletTPActive and newHp < lastHp then
+            local name = (tgt.DisplayName ~= "" and tgt.DisplayName) or tgt.Name
+            SpawnHitNoti(name, lastHp - newHp)
+        end
+        lastHp = newHp
+    end)
+end
+
+local function BTP_SetTarget(tgt)
+    if BulletTPCharConn then BulletTPCharConn:Disconnect(); BulletTPCharConn = nil end
+    BTP_HookHealth(tgt)
+    if tgt then
+        BulletTPCharConn = tgt.CharacterAdded:Connect(function()
+            task.wait(0.1); BTP_HookHealth(tgt)
+        end)
+    end
+end
+
+-- keep bullet TP target in sync with whatever the current aim target is
+RunService.Heartbeat:Connect(function()
+    if not flags.bullettp then BulletTPActive = false; return end
+    local tgt = CurrentTarget or SelectedTarget or CamLockTarget
+    if tgt ~= _G.__btpLastTarget then
+        _G.__btpLastTarget = tgt
+        BTP_SetTarget(tgt)
+    end
+end)
+
+-- ============================================================================
 -- INPUT
 -- ============================================================================
 UserInputService.InputBegan:Connect(function(input,processed)
@@ -1630,6 +1709,8 @@ UserInputService.InputBegan:Connect(function(input,processed)
     if flags.superjump and KeyMatches(input,"superjumpkey") then SuperJumpActive=not SuperJumpActive end
     -- Infinite Range: toggle enables it, keybind activates/deactivates
     if flags.infrange and KeyMatches(input,"infrangekey") then InfRangeActive=not InfRangeActive end
+    -- Bullet TP: driven by toggle flag directly
+    BulletTPActive = flags.bullettp == true
 end)
 
 -- ============================================================================
