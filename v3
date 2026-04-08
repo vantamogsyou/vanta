@@ -54,6 +54,9 @@ CamSection:Slider({  name="Smoothness",     pointer="camsmooth",      minimum=0,
 CamSection:Toggle({  name="FOV Circle",     pointer="camlockfov",     default=false, callback=function()end })
 CamSection:Slider({  name="FOV Size",       pointer="camlockfovsize", minimum=10, maximum=500, default=55, callback=function()end })
 
+local BulletTPMainSection = MainTab:Section({ name = "Bullet TP", side = "right" })
+BulletTPMainSection:Toggle({ name="Bullet TP", pointer="bullettp", default=false, callback=function()end })
+
 local MovementTab = Window:Page({ name = "Movement" })
 local SpeedSection = MovementTab:Section({ name = "Speed", side = "left" })
 SpeedSection:Toggle({  name="Speed",      pointer="speed",     default=false, callback=function()end })
@@ -67,6 +70,9 @@ JumpSection:Slider({  name="Power",       pointer="jumppower",    minimum=50, ma
 
 local StompSection = MovementTab:Section({ name = "Auto Stomp", side = "left" })
 StompSection:Toggle({ name="Auto Stomp", pointer="autostomp", default=false, callback=function()end })
+
+local BulletTPMovSection = MovementTab:Section({ name = "Bullet TP", side = "right" })
+BulletTPMovSection:Toggle({ name="Bullet TP", pointer="bullettp", default=false, callback=function()end })
 
 local VisualsTab = Window:Page({ name = "Visuals" })
 local ESPSection = VisualsTab:Section({ name = "ESP", side = "left" })
@@ -1567,7 +1573,7 @@ RunService.Heartbeat:Connect(function()
         local hrp = p.Character:FindFirstChild("HumanoidRootPart")
         if not hum or not hrp then continue end
         -- trigger on anyone at 11 hp or under
-        if hum.Health > 11 then continue end
+        if hum.Health > 9 then continue end
         -- skip if already stomped this down-state
         if StompedPlayers[p.UserId] then continue end
 
@@ -1603,7 +1609,7 @@ RunService.Heartbeat:Connect(function()
     for _, p in pairs(Players:GetPlayers()) do
         if p == LocalPlayer or not p.Character then continue end
         local hum = p.Character:FindFirstChildOfClass("Humanoid")
-        if hum and hum.Health > 11 then
+        if hum and hum.Health > 9 then
             StompedPlayers[p.UserId] = nil
         end
     end
@@ -1759,6 +1765,67 @@ do
     if not cc then cc=Instance.new("ColorCorrectionEffect",lighting) end
     cc.Enabled=false
 end
+
+-- ============================================================================
+-- BULLET TP
+-- ============================================================================
+local BulletTPConn = nil
+
+local function BulletTP_GetGrip(handCFrame, targetCFrame)
+    -- builds a grip CFrame that points the tool toward the target's HRP
+    local offset = CFrame.new(0, -1, 0, 1, 0, 0, 0, 0, 1, 0, -1, 0)
+    return handCFrame:ToObjectSpace(targetCFrame):inverse() * offset
+end
+
+local function BulletTP_Fire(tool)
+    if not flags.bullettp then return end
+    -- find closest target (reuse existing helper)
+    local target = CurrentTarget or SelectedTarget or CamLockTarget or FindClosestToMouse(true)
+    if not target or not target.Character then return end
+    local hrp = target.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    local char = LocalPlayer.Character
+    if not char then return end
+    local rightHand = char:FindFirstChild("RightHand")
+    if not rightHand then return end
+
+    -- infinite range: temporarily disable distance checks by teleporting grip
+    local savedGrip = tool.Grip
+
+    -- anchor hand, set grip toward target, re-equip to fire
+    rightHand.Anchored = true
+    tool.Grip = BulletTP_GetGrip(rightHand.CFrame, hrp.CFrame)
+    tool.Parent = LocalPlayer.Backpack
+    RunService.RenderStepped:Wait()
+    tool.Parent = char
+    RunService.RenderStepped:Wait()
+    tool.Parent = LocalPlayer.Backpack
+    rightHand.Anchored = false
+    RunService.RenderStepped:Wait()
+    tool.Parent = char
+    tool.Grip = savedGrip
+end
+
+local function BulletTP_SetupChar(char)
+    if BulletTPConn then BulletTPConn:Disconnect(); BulletTPConn = nil end
+    char.ChildAdded:Connect(function(child)
+        if not flags.bullettp then return end
+        if child:IsA("Tool") then
+            BulletTPConn = child.Activated:Connect(function()
+                BulletTP_Fire(child)
+            end)
+        end
+    end)
+    char.ChildRemoved:Connect(function(child)
+        if child:IsA("Tool") and BulletTPConn then
+            BulletTPConn:Disconnect(); BulletTPConn = nil
+        end
+    end)
+end
+
+BulletTP_SetupChar(LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait())
+LocalPlayer.CharacterAdded:Connect(BulletTP_SetupChar)
 
 -- ============================================================================
 -- MAIN HEARTBEAT
