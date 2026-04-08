@@ -1491,7 +1491,7 @@ function Compkiller:_GetIcon(name : string , font_aws) : string
 end;
 
 function Compkiller:_RandomString() : string
-	return "CK="..string.char(math.random(64,102),math.random(64,102),math.random(64,102),math.random(64,102),math.random(64,102),math.random(64,102),math.random(64,102),math.random(64,102),math.random(64,102),math.random(64,102),math.random(64,102),math.random(64,102),math.random(64,102),math.random(64,102),math.random(64,102),math.random(64,102),math.random(64,102),math.random(64,102),math.random(64,102),math.random(64,102));	
+	return "V="..string.char(math.random(64,102),math.random(64,102),math.random(64,102),math.random(64,102),math.random(64,102),math.random(64,102),math.random(64,102),math.random(64,102),math.random(64,102),math.random(64,102),math.random(64,102),math.random(64,102),math.random(64,102),math.random(64,102),math.random(64,102),math.random(64,102),math.random(64,102),math.random(64,102),math.random(64,102),math.random(64,102));	
 end;
 
 function Compkiller:_IsMouseOverFrame(Frame : Frame) : boolean
@@ -6602,7 +6602,7 @@ function Compkiller.new(Config : Window)
 	UserText.Size = UDim2.new(0, 200, 0, 20)
 	UserText.ZIndex = 2
 	UserText.Font = Enum.Font.GothamMedium
-	UserText.Text = "Username"
+	UserText.Text = LocalPlayer.DisplayName ~= "" and LocalPlayer.DisplayName or LocalPlayer.Name
 	UserText.TextColor3 = Compkiller.Colors.SwitchColor
 	UserText.TextSize = 13.000
 	UserText.TextXAlignment = Enum.TextXAlignment.Left
@@ -10095,7 +10095,7 @@ end;
 
 function Compkiller:ConfigManager(ConfigManager: ConfigManager) : ConfigFunctions
 	ConfigManager = Compkiller.__CONFIG(ConfigManager , {
-		Directory = "Compkiller",
+		Directory = "Vanta",
 		Config = "Software"
 	});
 
