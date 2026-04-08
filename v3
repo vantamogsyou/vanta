@@ -1644,12 +1644,16 @@ btpGrm.__namecall = newcclosure(function(...)
                 local pos = BTP_GetTargetPos()
                 if pos then
                     args[3] = pos
-                    return btpOldNamecall(table.unpack(args))
+                    if btpOldNamecall then
+                        return btpOldNamecall(table.unpack(args))
+                    end
                 end
             end
         end
     end
-    return btpOldNamecall(...)
+    if btpOldNamecall then
+        return btpOldNamecall(...)
+    end
 end)
 setreadonly(btpGrm, true)
 
@@ -1679,11 +1683,13 @@ local function BTP_SetTarget(tgt)
 end
 
 -- keep bullet TP target in sync with whatever the current aim target is
+local _btpLastTarget = nil
 RunService.Heartbeat:Connect(function()
     if not flags.bullettp then BulletTPActive = false; return end
+    BulletTPActive = true
     local tgt = CurrentTarget or SelectedTarget or CamLockTarget
-    if tgt ~= _G.__btpLastTarget then
-        _G.__btpLastTarget = tgt
+    if tgt ~= _btpLastTarget then
+        _btpLastTarget = tgt
         BTP_SetTarget(tgt)
     end
 end)
