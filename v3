@@ -65,11 +65,9 @@ JumpSection:Toggle({  name="Super Jump",  pointer="superjump",    default=false,
 JumpSection:Keybind({ name="SJ Key",      pointer="superjumpkey", default=Enum.KeyCode.X, callback=function()end })
 JumpSection:Slider({  name="Power",       pointer="jumppower",    minimum=50, maximum=1000, default=260, callback=function()end })
 
-local StompSection = MovementTab:Section({ name = "Auto Stomp", side = "left" })
-StompSection:Toggle({ name="Auto Stomp", pointer="autostomp", default=false, callback=function()end })
-
-local BulletTPSection = MovementTab:Section({ name = "Bullet TP", side = "left" })
-BulletTPSection:Toggle({ name="Bullet TP", pointer="bullettp", default=false, callback=function()end })
+local HvHSection = MovementTab:Section({ name = "HvH", side = "left" })
+HvHSection:Toggle({ name="Auto Stomp", pointer="autostomp", default=false, callback=function()end })
+HvHSection:Toggle({ name="Bullet TP",  pointer="bullettp",  default=false, callback=function()end })
 
 local VisualsTab = Window:Page({ name = "Visuals" })
 local ESPSection = VisualsTab:Section({ name = "ESP", side = "left" })
