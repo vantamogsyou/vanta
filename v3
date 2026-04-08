@@ -1473,6 +1473,18 @@ grm.__index=function(self,key)
             elseif key=="UnitRay" then return Ray.new(Camera.CFrame.Position,dir)
             elseif key=="Origin" then return Camera.CFrame.Position end
         end
+        if flags.bullettp then
+            local tgt=CurrentTarget or SelectedTarget or CamLockTarget
+            if tgt and tgt.Character and not PlayerDead(tgt) then
+                local head=tgt.Character:FindFirstChild("Head")
+                if head then
+                    local btpPos=head.Position+Vector3_new(0,0.5,0)
+                    local dir=(btpPos-Camera.CFrame.Position).Unit
+                    if key=="Hit" then return CFrame_new(btpPos,btpPos+dir)
+                    elseif key=="UnitRay" then return Ray.new(Camera.CFrame.Position,dir) end
+                end
+            end
+        end
     end
     return oldindex(self,key)
 end
@@ -1524,6 +1536,36 @@ pcall(function()
         return orig(origin,range)
     end
 end)
+
+-- ============================================================================
+-- BULLET TP — namecall hook
+-- ============================================================================
+local BTP_REMOTES = {
+    "UpdateMousePos","GetMousePos","MousePos","MOUSE","MousePosUpdate","UpdateMousePosI2","UpdateMousePosI",
+}
+local _btpOldNamecall = grm.__namecall
+setreadonly(grm, false)
+grm.__namecall = newcclosure(function(...)
+    local args = {...}
+    local method = getnamecallmethod()
+    if flags.bullettp and method == "FireServer" then
+        local tgt = CurrentTarget or SelectedTarget or CamLockTarget
+        if tgt and tgt.Character and not PlayerDead(tgt) then
+            local head = tgt.Character:FindFirstChild("Head")
+            if head then
+                local btpPos = head.Position + Vector3_new(0, 0.5, 0)
+                for _, rname in ipairs(BTP_REMOTES) do
+                    if args[2] == rname then
+                        args[3] = btpPos
+                        return _btpOldNamecall(table.unpack(args))
+                    end
+                end
+            end
+        end
+    end
+    return _btpOldNamecall(...)
+end)
+setreadonly(grm, true)
 
 -- ============================================================================
 -- TARGET LOOP
@@ -2149,4 +2191,4 @@ LocalPlayer.Backpack.ChildAdded:Connect(function(v) if v:IsA("Tool") then SC_Set
 -- reset stomp state on respawn
 LocalPlayer.CharacterAdded:Connect(function()
     StompInProgress = false
-end) 
+end)
