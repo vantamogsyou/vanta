@@ -1688,6 +1688,7 @@ RunService.Heartbeat:Connect(function()
             myHRP.CFrame = prevCF
             StompInProgress = false
 
+            -- void stomp: go into void after stomp, wait, come back out for next target
             if flags.voidstomp then
                 VoidEnter()
                 task.wait(flags.voidstompdur or 2)
@@ -2248,4 +2249,4 @@ LocalPlayer.Backpack.ChildAdded:Connect(function(v) if v:IsA("Tool") then SC_Set
 -- reset stomp state on respawn
 LocalPlayer.CharacterAdded:Connect(function()
     StompInProgress = false
-end) 
+end)
